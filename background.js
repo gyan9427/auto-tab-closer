@@ -164,7 +164,7 @@ function getTabContent(tabId) {
  */
 function getRelevanceScore(tabContent, settings) {
   console.log('[5] Computing relevance score for tab content with settings', settings);
-  console.log('[5.1] Tab content title:', tabContent.title);
+  console.log('[5.1] Tab content title:', tabContent && tabContent.title);
   const { focusTopics, relevanceThreshold } = settings || cachedSettings;
 
   if (!tabContent || !tabContent.text) {
@@ -176,7 +176,6 @@ function getRelevanceScore(tabContent, settings) {
   }
 
   if (!focusTopics || focusTopics.length === 0) {
-    // If no topics defined, treat everything as relevant to avoid aggressive closing.
     console.log('[5.3] ⚠️ No focus topics configured; treating as relevant');
     return {
       score: 1,
@@ -185,30 +184,30 @@ function getRelevanceScore(tabContent, settings) {
   }
 
   const text = (tabContent.title + ' ' + tabContent.text).toLowerCase();
-  let totalMatches = 0;
-  let details = [];
 
-  focusTopics.forEach((topicRaw) => {
-    const topic = (topicRaw || '').trim().toLowerCase();
-    if (!topic) return;
+  // Clean topics and drop empties
+  const topics = focusTopics
+    .map((t) => (t || '').trim().toLowerCase())
+    .filter((t) => t.length > 0);
 
-    // Simple substring count
-    let count = 0;
-    let index = text.indexOf(topic);
-    while (index !== -1) {
-      count += 1;
-      index = text.indexOf(topic, index + topic.length);
-      // Guard against pathological cases
-      if (count > 1000) break;
-    }
+  if (topics.length === 0) {
+    return {
+      score: 1,
+      reason: 'No valid (non-empty) focus topics configured; treating as relevant'
+    };
+  }
 
-    if (count > 0) {
-      details.push(`${topic}: ${count}`);
-      totalMatches += count;
+  let matchedTopics = 0;
+  const matchedDetails = [];
+
+  topics.forEach((topic) => {
+    if (text.indexOf(topic) !== -1) {
+      matchedTopics += 1;
+      matchedDetails.push(topic);
     }
   });
 
-  if (totalMatches === 0) {
+  if (matchedTopics === 0) {
     console.log('[5.4] No focus topics found in tab content');
     return {
       score: 0,
@@ -216,16 +215,28 @@ function getRelevanceScore(tabContent, settings) {
     };
   }
 
-  // Normalize: a few matches yield a non-zero but bounded score
-  const normalizer = 20; // tuneable
-  const rawScore = totalMatches / normalizer;
-  const score = rawScore > 1 ? 1 : rawScore;
+  // If ALL topics are present at least once, give maximum score
+  let score;
+  if (matchedTopics === topics.length) {
+    score = 1;
+  } else {
+    // Otherwise, score is fraction of topics that appear
+    score = matchedTopics / topics.length;
+  }
 
-  console.log(`[5.5] Relevance computed: score=${score.toFixed(2)}, matches found (${details.join(', ')}), threshold=${relevanceThreshold}`);
+  console.log(
+    `[5.5] Relevance computed: score=${score.toFixed(
+      2
+    )}, topics matched=(${matchedDetails.join(', ')}), totalTopics=${topics.length}, threshold=${
+      relevanceThreshold
+    }`
+  );
 
   return {
     score,
-    reason: `Matches found (${details.join(', ')}), threshold=${relevanceThreshold}`
+    reason: `Matched topics: (${matchedDetails.join(
+      ', '
+    )}), total topics=${topics.length}, threshold=${relevanceThreshold}`
   };
 }
 
