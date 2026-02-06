@@ -15,11 +15,16 @@
   </head>
   <body>
     <h1>Auto Tab Closer</h1>
-    <p class="muted">Manage settings and control behavior.</p>
+    <p class="muted">Extract topics from this tab and add them to your focus list.</p>
 
-    <div class="row">
-      <button id="openOptions">Open Settings</button>
-    </div>
+    <section id="topicsSection">
+      <p class="muted" id="topicsStatus">Loading topics from this page...</p>
+      <div id="topicsContainer" style="max-height: 160px; overflow-y: auto; margin-bottom: 8px;"></div>
+      <div class="row" style="justify-content: space-between;">
+        <button id="addTopics" disabled>Add topics</button>
+        <button id="openOptions">Open Settings</button>
+      </div>
+    </section>
 
     <script src="popup.js"></script>
   </body>

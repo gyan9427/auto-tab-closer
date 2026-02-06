@@ -50,6 +50,29 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 // Load initial settings at startup
 loadSettings();
 
+// ---- Messaging & badge handling --------------------------------------------
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || !message.type) {
+    return;
+  }
+
+  if (message.type === 'topicsAdded') {
+    const added = Array.isArray(message.addedTopics) ? message.addedTopics : [];
+    console.log('[MSG] topicsAdded received from popup. Topics:', added);
+
+    // Highlight the extension action badge with a green dot
+    chrome.action.setBadgeBackgroundColor({ color: '#34a853' }, () => {
+      chrome.action.setBadgeText({ text: '●' });
+    });
+
+    // Optionally clear the badge after some time so it is not permanent
+    setTimeout(() => {
+      chrome.action.setBadgeText({ text: '' });
+    }, 10000);
+  }
+});
+
 // ---- Tab activity tracking -------------------------------------------------
 
 // When a tab is activated
